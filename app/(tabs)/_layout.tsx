@@ -41,9 +41,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="find"
+        name="join"
         options={{
-          title: 'Find',
+          title: 'Call',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="hourglass" color={color} />,
         }}
       />
