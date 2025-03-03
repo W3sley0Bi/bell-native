@@ -32,9 +32,11 @@ export default function App() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [type, setType] = useState<'JOIN' | 'INCOMING_CALL' | 'OUTGOING_CALL' | 'WEBRTC_ROOM'>('JOIN');
-  const [callerId] = useState(1);
-  const otherUserId = useRef<string | null>(null);
-  const socket = useRef(SocketIOClient('http://192.168.2.201:3500', {
+  const [callerId] = useState(Math.floor(100000 + Math.random() * 900000).toString());
+  const [otherUserId, setOtherUserId] = useState<string>('');
+
+  const TEST_ADDRESS = "<your_local_net_address>:3500" //works only with emulator locally - changes from device to device so we better ovewrite this with an .env.local variable
+  const socket = useRef(SocketIOClient(TEST_ADDRESS, {
     transports: ['websocket'],
     query: {
       callerId,
@@ -57,7 +59,7 @@ export default function App() {
   useEffect(() => {
     socket.on('newCall', (data) => {
       remoteRTCMessage.current = data.rtcMessage;
-      otherUserId.current = data.callerId;
+      setOtherUserId(data.callerId);
       setType('INCOMING_CALL');
     });
 
@@ -113,7 +115,7 @@ export default function App() {
     peerConnection.current.addEventListener('icecandidate', (event) => {
       if (event.candidate) {
         sendICEcandidate({
-          calleeId: otherUserId.current,
+          calleeId: otherUserId,
           rtcMessage: {
             label: event.candidate.sdpMLineIndex,
             id: event.candidate.sdpMid,
@@ -149,7 +151,7 @@ export default function App() {
     const sessionDescription = await peerConnection.current.createOffer({});
     await peerConnection.current.setLocalDescription(sessionDescription);
     sendCall({
-      calleeId: otherUserId.current,
+      calleeId: otherUserId,
       rtcMessage: sessionDescription,
     });
   }
@@ -159,7 +161,7 @@ export default function App() {
     const sessionDescription = await peerConnection.current.createAnswer();
     await peerConnection.current.setLocalDescription(sessionDescription);
     answerCall({
-      callerId: otherUserId.current,
+      callerId: otherUserId,
       rtcMessage: sessionDescription,
     });
   }
@@ -214,10 +216,8 @@ export default function App() {
             </Text>
             <TextInputContainer
               placeholder={'Enter Caller ID'}
-              value={otherUserId.current || ''}
-              setValue={text => {
-                otherUserId.current = text;
-              }}
+              value={otherUserId}
+              setValue={setOtherUserId}
               keyboardType={'number-pad'}
             />
             <TouchableOpacity
@@ -254,14 +254,14 @@ export default function App() {
       }}>
         <Text style={{ fontSize: 16, color: '#D0D4DD' }}>Calling to...</Text>
         <Text style={{ fontSize: 36, marginTop: 12, color: '#ffff', letterSpacing: 6 }}>
-          {otherUserId.current}
+          {otherUserId}
         </Text>
       </View>
       <View style={{ justifyContent: 'center', alignItems: 'center' }}>
         <TouchableOpacity
           onPress={() => {
             setType('JOIN');
-            otherUserId.current = null;
+            setOtherUserId('');
           }}
           style={{
             backgroundColor: '#FF5D5D',
@@ -290,7 +290,7 @@ export default function App() {
         borderRadius: 14,
       }}>
         <Text style={{ fontSize: 36, marginTop: 12, color: '#ffff' }}>
-          {otherUserId.current} is calling..
+          {otherUserId} is calling..
         </Text>
       </View>
       <View style={{ justifyContent: 'center', alignItems: 'center' }}>
